@@ -30,14 +30,25 @@ void ARunnerController::RefreshInputContext()
     auto* Runner=Cast<ARunnerCharacter>(GetPawn());
     // OnPossess and AcknowledgePossession can both notify the same local player.
     // Keep one installation instead of flushing and rebuilding it twice.
-    if (IsLocalController() && Runner && Runner->bGameplayEnabled
+    if (!bMenuOpen
+        && IsLocalController() && Runner && Runner->bGameplayEnabled
         && InstalledContext && InstalledContext==Runner->GameplayContext)
         if (auto* LP=GetLocalPlayer())
             if (auto* Subsystem=LP->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
                 if (Subsystem->HasMappingContext(InstalledContext)) return;
     RemoveInputContext();
-    if (!IsLocalController() || !Runner) return;
+    if (!IsLocalController()) return;
+    bShowMouseCursor=bMenuOpen;
+    if (bMenuOpen)
+    {
+        FInputModeGameAndUI Mode;
+        Mode.SetHideCursorDuringCapture(false);
+        SetInputMode(Mode);
+    }
+    else SetInputMode(FInputModeGameOnly());
+    if (!Runner) return;
     // LAB 2: account for menu ownership before enabling the pawn/installing its context.
+    if (bMenuOpen) { Runner->SetGameplayEnabled(false); return; }
     Runner->SetGameplayEnabled(true);
     if (!Runner->GameplayContext) return;
     if (auto* LP=GetLocalPlayer())
@@ -67,6 +78,9 @@ void ARunnerController::ToggleMenu()
     // Update context lifetime, clear held input, gate the pawn, and set cursor/input mode.
     // The HUD panel and Tab shortcut are supplied. Do not pause the world.
     // A replacement pawn must also respect menu ownership.
+    bMenuOpen=!bMenuOpen;
+    UE_LOG(LogTemp,Display,TEXT("MENU_%s"),bMenuOpen?TEXT("OPEN"):TEXT("CLOSED"));
+    RefreshInputContext();
 }
 void ARunnerController::RestartRunner()
 {
@@ -78,4 +92,3 @@ void ARunnerController::ToggleProbe()
 {
     if (auto* Runner=Cast<ARunnerCharacter>(GetPawn())) Runner->bShowFloorProbe=!Runner->bShowFloorProbe;
 }
-
