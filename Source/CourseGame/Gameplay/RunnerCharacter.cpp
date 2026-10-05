@@ -75,8 +75,26 @@ bool ARunnerCharacter::ProbeFloor()
     // LAB 3: implement a diagnostic downward floor query here.
     // Record origin, direction, length and channel. Draw it when bShowFloorProbe is true.
     // Keep CharacterMovement responsible for grounding.
-    bFloorProbeHit=false;
-    return false;
+    const float HalfHeight = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    const FVector ProbeOrigin = GetActorLocation() - FVector(0.f, 0.f, HalfHeight - 1.f);
+    const FVector ProbeDirection(0.f, 0.f, -1.f);
+    const float ProbeLength = 12.f;
+    const ECollisionChannel ProbeChannel = ECC_Visibility;
+    const FVector ProbeEnd = ProbeOrigin + ProbeDirection * ProbeLength;
+
+    FCollisionQueryParams Params(SCENE_QUERY_STAT(RunnerFloorProbe), false, this);
+    FHitResult Hit;
+    bFloorProbeHit = GetWorld()->LineTraceSingleByChannel(Hit, ProbeOrigin, ProbeEnd, ProbeChannel, Params);
+
+    if (bShowFloorProbe)
+    {
+        DrawDebugLine(GetWorld(), ProbeOrigin, ProbeEnd, bFloorProbeHit ? FColor::Green : FColor::Red, false, 0.f, 0, 0.3f);
+        if (bFloorProbeHit) DrawDebugPoint(GetWorld(), Hit.ImpactPoint, 3.f, FColor::Yellow, false, 0.f);
+        DrawDebugString(GetWorld(), ProbeOrigin + FVector(0.f, 0.f, 40.f),
+            TEXT("Origin: capsule bottom +1uu | Dir: -Z | Len: 12uu | Channel: Visibility"),
+            nullptr, FColor::White, 0.f, false, 1.5f);
+    }
+    return bFloorProbeHit;
 }
 void ARunnerCharacter::Tick(float DeltaSeconds)
 {
